@@ -1,5 +1,6 @@
 #include "efi.h"
 #include "common.h"
+#include "file.h"
 #include "graphics.h"
 #include "shell.h"
 #include "gui.h"
@@ -33,6 +34,42 @@ void pstat(void)
 	}
 }
 
+int ls(void)
+{
+	unsigned long long status;
+	struct EFI_FILE_PROTOCOL *root;
+	unsigned long long buf_size;
+	unsigned char file_buf[MAX_FILE_BUF];
+	struct EFI_FILE_INFO *file_info;
+	int idx = 0;
+	int file_num;
+
+	status = SFSP->OpenVolume(SFSP, &root);
+	assert(status, L"SFSP->OpenVolume");
+
+	while (1) {
+		buf_size = MAX_FILE_BUF;
+		status = root->Read(root, &buf_size, (void *)file_buf);
+		assert(status, L"root->Read");
+		if (!buf_size) break;
+
+		file_info = (struct EFI_FILE_INFO *)file_buf;
+		strncpy(file_list[idx].name, file_info->FileName,
+			MAX_FILE_NAME_LEN - 1);
+		file_list[idx].name[MAX_FILE_NAME_LEN - 1] = L'\0';
+		puts(file_list[idx].name);
+		puts(L" ");
+
+		idx++;
+	}
+	puts(L"\r\n");
+	file_num = idx;
+
+	root->Close(root);
+
+	return file_num;
+}
+
 void shell(void)
 {
 	unsigned short com[MAX_COMMAND_LEN];
@@ -51,6 +88,8 @@ void shell(void)
 			gui();
 		else if (!strcmp(L"pstat", com))
 			pstat();
+		else if (!strcmp(L"ls", com))
+			ls();
 		else
 			puts(L"Command not found.\r\n");
 	}
