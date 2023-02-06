@@ -137,8 +137,27 @@ struct EFI_GRAPHICS_OUTPUT_PROTOCOL {
 	} *Mode;
 };
 
+struct EFI_SIMPLE_POINTER_STATE {
+	int RelativeMovementX;
+	int RelativeMovementY;
+	int RelativeMovementZ;
+	unsigned char LeftButton;
+	unsigned char RightButton;
+};
+
+struct EFI_SIMPLE_POINTER_PROTOCOL {
+	unsigned long long (*Reset)(
+		struct EFI_SIMPLE_POINTER_PROTOCOL *This,
+		unsigned char ExtendedVerification);
+	unsigned long long (*GetState)(
+		struct EFI_SIMPLE_POINTER_PROTOCOL *This,
+		struct EFI_SIMPLE_POINTER_STATE *State);
+	void *WaitForInput;
+};
+
 extern struct EFI_SYSTEM_TABLE *ST;
 extern struct EFI_GRAPHICS_OUTPUT_PROTOCOL *GOP;
+extern struct EFI_SIMPLE_POINTER_PROTOCOL *SPP;
 
 void efi_init(struct EFI_SYSTEM_TABLE *SystemTable);
 
