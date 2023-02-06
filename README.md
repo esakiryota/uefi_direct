@@ -42,3 +42,10 @@ clean:
 	rm -f main.efi
 
  ```
+
+
+ ## QEMU 終了方法
+ ctl+opt+g
+
+ ## メモ
+ ・-nographic をはずした。->結局動いた
