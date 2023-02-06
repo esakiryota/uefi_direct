@@ -1,7 +1,12 @@
 #include "efi.h"
 #include "common.h"
+#include "file.h"
 #include "graphics.h"
+#include "shell.h"
 #include "gui.h"
+
+#define WIDTH_PER_CH	8
+#define HEIGHT_PER_CH	20
 
 struct EFI_GRAPHICS_OUTPUT_BLT_PIXEL cursor_tmp = {0, 0, 0, 0};
 int cursor_old_x;
@@ -36,20 +41,45 @@ void put_cursor(int x, int y)
 	cursor_old_y = y;
 }
 
+int ls_gui(void)
+{
+	int file_num;
+	struct RECT t;
+	int idx;
+
+	ST->ConOut->ClearScreen(ST->ConOut);
+
+	file_num = ls();
+
+	t.x = 0;
+	t.y = 0;
+	t.w = (MAX_FILE_NAME_LEN - 1) * WIDTH_PER_CH;
+	t.h = HEIGHT_PER_CH;
+	for (idx = 0; idx < file_num; idx++) {
+		file_list[idx].rect.x = t.x;
+		file_list[idx].rect.y = t.y;
+		file_list[idx].rect.w = t.w;
+		file_list[idx].rect.h = t.h;
+		draw_rect(file_list[idx].rect, white);
+		t.x += file_list[idx].rect.w + WIDTH_PER_CH;
+
+		file_list[idx].is_highlight = FALSE;
+	}
+
+	return file_num;
+}
+
 void gui(void)
 {
-	struct RECT r = {10, 10, 20, 20};
 	unsigned long long status;
 	struct EFI_SIMPLE_POINTER_STATE s;
 	int px = 0, py = 0;
 	unsigned long long waitidx;
-	unsigned char is_highlight = FALSE;
+	int file_num;
+	int idx;
 
-	ST->ConOut->ClearScreen(ST->ConOut);
 	SPP->Reset(SPP, FALSE);
-
-	/* ファイルアイコンに見立てた矩形を描画 */
-	draw_rect(r, white);
+	file_num = ls_gui();
 
 	while (TRUE) {
 		ST->BootServices->WaitForEvent(1, &(SPP->WaitForInput), &waitidx);
@@ -72,16 +102,21 @@ void gui(void)
 			/* マウスカーソル描画 */
 			put_cursor(px, py);
 
-			/* ファイルアイコン処理 */
-			if (is_in_rect(px, py, r)) {
-				if (!is_highlight) {
-					draw_rect(r, yellow);
-					is_highlight = TRUE;
-				}
-			} else {
-				if (is_highlight) {
-					draw_rect(r, white);
-					is_highlight = FALSE;
+			/* ファイルアイコン処理ループ */
+			for (idx = 0; idx < file_num; idx++) {
+				if (is_in_rect(px, py, file_list[idx].rect)) {
+					if (!file_list[idx].is_highlight) {
+						draw_rect(file_list[idx].rect,
+							  yellow);
+						file_list[idx].is_highlight = TRUE;
+					}
+				} else {
+					if (file_list[idx].is_highlight) {
+						draw_rect(file_list[idx].rect,
+							  white);
+						file_list[idx].is_highlight =
+							FALSE;
+					}
 				}
 			}
 		}
